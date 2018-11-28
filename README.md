@@ -5,4 +5,5 @@ Relatório: 59% das obras de escolas e creches com recursos federais a entregar 
 
 Nesse repositório você irá encontrar: 
 1. Arquivos obtidos do FNDE que embasaram os dados;
-2. Script para reprodução das análises.
+2. [Script para reprodução das análises.] (https://github.com/voigtjessica/campanha_TDP_2018/blob/master/relatorio_campanha_tdp.R)
+
