@@ -294,9 +294,9 @@ sit_obras_final <- convenio_uma_obra %>%
          pagto_final = ifelse(estimativa_repasse == 0, pagto_total_cte_nov2018, estimativa_repasse),
          valor_estimado = ifelse(estimativa_repasse == 0, "não", "sim"))
 
-save(sit_obras_final, file="sit_obras_final.Rdata")
-write.csv(sit_obras_final , file="sit_obras_final.csv", sep=";", quote = TRUE,
-          row.names = FALSE)
+# save(sit_obras_final, file="sit_obras_final.Rdata")
+# write.csv(sit_obras_final , file="sit_obras_final.csv", sep=";", quote = TRUE,
+#           row.names = FALSE)
 
 # arquivo que subiremos para enviar a ação no nosso sistema (irrelevante para quem quer apenas replicar o estudo,
 # mas eu crio um objeto de filtro futuramente a partir desse objeto)
@@ -358,33 +358,43 @@ obras_campanha <- sit_obras_final %>%
 
 #Informações compiladas de cada unidade federativa
 anexo1 <- sit_obras_final %>%
-  filter(id %in% ids_envio_acao) %>%
-  group_by(uf, responsabilidade) %>%
-  summarise(obras = n(),
-            valor_repassado = sum(pagto_final, na.rm=TRUE)) %>%
-  spread(responsabilidade, obras) %>%
-  clean_names() %>%
-  mutate(num = ifelse(!is.na(municipal), "valor_municipais", "valor_estaduais")) %>%
-  spread(num, valor_repassado) %>%
-  ungroup() %>%
+  mutate(envio_acao = ifelse(id %in% ids_envio_acao, 1, 0),
+         pendente = ifelse(status %in% c("concluida", "cancelada"), 0, 1),
+         num = 1) %>%
   group_by(uf) %>%
-  summarise(obras_municipais_notificadas = sum(municipal, na.rm=TRUE),
-            repasse_estimado_obras_municipais = sum(valor_municipais, na.rm=TRUE),
-            obras_estaduais_notificadas = sum(estadual, na.rm=TRUE),
-            repasse_estimado_obras_estaduais = sum(valor_estaduais, na.rm=TRUE)) %>%
-  mutate(obras_municipais_notificadas = ifelse(is.na(obras_municipais_notificadas), 0, obras_municipais_notificadas),
-         obras_estaduais_notificadas = ifelse(is.na(obras_estaduais_notificadas), 0, obras_estaduais_notificadas), 
-         total_repasses_estimados = repasse_estimado_obras_municipais + repasse_estimado_obras_estaduais,
-         repasse_estimado_obras_municipais	= ifelse(repasse_estimado_obras_municipais == 0, NA, round(repasse_estimado_obras_municipais)),
-         repasse_estimado_obras_estaduais = ifelse(repasse_estimado_obras_estaduais == 0, NA, round(repasse_estimado_obras_estaduais)),
-         total_obras_notificadas = obras_estaduais_notificadas + obras_municipais_notificadas) %>%
-  select(1:5, 7,6)
+  summarise(obras_municipais_notificadas = sum(envio_acao[which(responsabilidade == "Municipal")]),
+            obras_municipais_a_Ser_entregue = sum(pendente[which(responsabilidade == "Municipal")]),
+            total_obras_municipais = sum(num[which(responsabilidade == "Municipal")]),
+            repasses_estimados_municipais_notificadas = round(sum(pagto_final[which(responsabilidade == "Municipal" & envio_acao == 1)], na.rm=TRUE), 0),
+            obras_estaduais_notificadas = sum(envio_acao[which(responsabilidade == "Estadual")]),
+            obras_estaduais_a_ser_entregues = sum(pendente[which(responsabilidade == "Estadual")]),
+            total_obras_estaduais = sum(num[which(responsabilidade=="Estadual")]),
+            repasses_estimados_estaduais_notificadas = round(sum(pagto_final[which(responsabilidade == "Estadual" & envio_acao == 1)], na.rm=TRUE), 0),
+            total_obras_notificadas = sum(envio_acao),
+            total_obras_a_ser_entregue = sum(pendente),
+            total_obras = sum(num),
+            total_repasses_estimados_para_obras_notificadas = repasses_estimados_municipais_notificadas + repasses_estimados_estaduais_notificadas)
 
 
-save(anexo1, file="anexo1.Rdata")
+names(anexo1) <- c('unidade federativa',
+                   'obras municipais com problemas',
+                   'obras municipais a serem entregues',
+                   'total obras municipais',
+                   'repasse estimado para obras municipais com problemas',
+                   'obras estaduais com problemas',
+                   'obras estaduais a serem entregues',
+                   'total obras estaduais',
+                   'repasse estimado obras estaduais com problemas',
+                   'total obras com problemas por uf',
+                   'total de obras a serem entregues por uf',
+                   'total de obras por uf',
+                   'total repasse estimado para obras com problemas por uf')
+
+# save(anexo1, file="anexo1.Rdata")
 # write.csv(anexo1, file="anexo1.csv", dec = ",", sep=";", row.names = FALSE)
 
 #subindo no drive:
+
 # anexo1_sheet <- drive_upload(
 #   "anexo1.csv",
 #   path="",
